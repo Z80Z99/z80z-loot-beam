@@ -1,6 +1,6 @@
-package cn.blockforge.lootbeamslite.client;
+package com.github.z80z.lootbeam.client;
 
-import cn.blockforge.lootbeamslite.config.ClientConfig;
+import com.github.z80z.lootbeam.config.ClientConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.item.ItemEntity;

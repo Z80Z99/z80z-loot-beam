@@ -1,7 +1,7 @@
-package cn.blockforge.lootbeamslite.client;
+package com.github.z80z.lootbeam.client;
 
-import cn.blockforge.lootbeamslite.config.ClientConfig;
-import cn.blockforge.lootbeamslite.config.BeamStyle;
+import com.github.z80z.lootbeam.config.ClientConfig;
+import com.github.z80z.lootbeam.config.BeamStyle;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -126,9 +126,9 @@ public final class LootBeamRenderer {
      * the fade towards the top, the glow gradient the falloff of the ground glow and its ring.
      */
     private static final ResourceLocation BEAM_GRADIENT =
-            new ResourceLocation("lootbeamslite", "textures/entity/beam_gradient.png");
+            new ResourceLocation("z80z_loot_beam", "textures/entity/beam_gradient.png");
     private static final ResourceLocation GLOW_GRADIENT =
-            new ResourceLocation("lootbeamslite", "textures/entity/glow_gradient.png");
+            new ResourceLocation("z80z_loot_beam", "textures/entity/glow_gradient.png");
 
     /**
      * Shader pack variant of {@link #BEAM_TYPE}.

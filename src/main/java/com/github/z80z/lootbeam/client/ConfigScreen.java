@@ -1,7 +1,7 @@
-package cn.blockforge.lootbeamslite.client;
+package com.github.z80z.lootbeam.client;
 
-import cn.blockforge.lootbeamslite.config.BeamStyle;
-import cn.blockforge.lootbeamslite.config.ClientConfig;
+import com.github.z80z.lootbeam.config.BeamStyle;
+import com.github.z80z.lootbeam.config.ClientConfig;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.AbstractWidget;

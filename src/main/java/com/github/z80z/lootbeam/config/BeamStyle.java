@@ -1,4 +1,4 @@
-package cn.blockforge.lootbeamslite.config;
+package com.github.z80z.lootbeam.config;
 
 /**
  * Shapes the loot beam can be drawn in.

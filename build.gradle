@@ -3,8 +3,8 @@ plugins {
     id 'net.minecraftforge.gradle' version '6.0.51'
 }
 
-version = '3.2.0'
-group = 'cn.blockforge.lootbeamslite'
+version = '3.2.1'
+group = 'com.github.z80z.lootbeam'
 base { archivesName = 'z80z-loot-beam-forge-1.20.1' }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)

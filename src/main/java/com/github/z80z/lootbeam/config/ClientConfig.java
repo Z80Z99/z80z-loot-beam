@@ -1,4 +1,4 @@
-package cn.blockforge.lootbeamslite.config;
+package com.github.z80z.lootbeam.config;
 
 import net.minecraftforge.common.ForgeConfigSpec;
 import java.util.List;

@@ -1,7 +1,7 @@
-package cn.blockforge.lootbeamslite.client;
+package com.github.z80z.lootbeam.client;
 
-import cn.blockforge.lootbeamslite.LootBeamsLite;
-import cn.blockforge.lootbeamslite.config.ClientConfig;
+import com.github.z80z.lootbeam.Z80ZLootBeam;
+import com.github.z80z.lootbeam.config.ClientConfig;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -129,7 +129,7 @@ public final class ClientEvents {
         tooltipAge = TOOLTIP_REFRESH_TICKS;
     }
 
-    @Mod.EventBusSubscriber(modid = LootBeamsLite.MOD_ID, value = net.minecraftforge.api.distmarker.Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+    @Mod.EventBusSubscriber(modid = Z80ZLootBeam.MOD_ID, value = net.minecraftforge.api.distmarker.Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
     public static final class ModBusEvents {
         @SubscribeEvent
         public static void registerKeys(RegisterKeyMappingsEvent event) {

@@ -1,6 +1,6 @@
-package cn.blockforge.lootbeamslite.client;
+package com.github.z80z.lootbeam.client;
 
-import cn.blockforge.lootbeamslite.config.ClientConfig;
+import com.github.z80z.lootbeam.config.ClientConfig;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
