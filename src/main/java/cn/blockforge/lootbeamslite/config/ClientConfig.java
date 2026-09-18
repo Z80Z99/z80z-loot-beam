@@ -21,7 +21,7 @@ public final class ClientConfig {
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
-        b.comment("战利品光束 Lite 客户端配置；所有说明均为中文。");
+        b.comment("Z80Z Loot Beam（战利品光束）客户端配置；所有说明均为中文。");
         b.push("general");
         ENABLED = bool(b, "enabled", true, "总开关");
         MAX_DISTANCE = decimal(b, "maxDistance", 96, 8, 256, "最大渲染距离（方块）");

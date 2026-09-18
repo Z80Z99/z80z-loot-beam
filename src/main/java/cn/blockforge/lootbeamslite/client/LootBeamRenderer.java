@@ -93,7 +93,7 @@ public final class LootBeamRenderer {
      */
     private static final RenderStateShard.TransparencyStateShard ADDITIVE_TRANSPARENCY =
             new RenderStateShard.TransparencyStateShard(
-                    "lootbeamslite_additive",
+                    "z80z_loot_beam_additive",
                     () -> {
                         RenderSystem.enableBlend();
                         RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
@@ -104,7 +104,7 @@ public final class LootBeamRenderer {
                     });
 
     private static final RenderType BEAM_TYPE = RenderType.create(
-            "lootbeamslite_beam",
+            "z80z_loot_beam_beam",
             DefaultVertexFormat.POSITION_COLOR,
             VertexFormat.Mode.QUADS,
             // Additive blending is order independent, so the quads never need sorting on upload.
@@ -153,10 +153,10 @@ public final class LootBeamRenderer {
      * just off pure white and the vertex alpha at one so the particle detectors stay quiet.</p>
      */
     private static final RenderType SHADER_BEAM_TYPE =
-            shaderType("lootbeamslite_beam_particle", BEAM_GRADIENT);
+            shaderType("z80z_loot_beam_beam_particle", BEAM_GRADIENT);
     /** Shader pack variant of the ground glow: same program, the glow gradient as its texture. */
     private static final RenderType SHADER_GLOW_TYPE =
-            shaderType("lootbeamslite_glow_particle", GLOW_GRADIENT);
+            shaderType("z80z_loot_beam_glow_particle", GLOW_GRADIENT);
 
     private static RenderType shaderType(String name, ResourceLocation texture) {
         return RenderType.create(

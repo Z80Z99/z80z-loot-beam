@@ -1,4 +1,4 @@
-# Loot Beams Lite
+# Z80Z Loot Beam
 
 Minecraft 1.20.1 Forge 客户端模组：为掉落物显示按稀有度着色的光柱、光晕、名称与物品提示框。
 无第三方前置，兼容原版渲染，也针对光影包做了专门处理。
@@ -24,13 +24,16 @@ Minecraft 1.20.1 Forge 客户端模组：为掉落物显示按稀有度着色的
 
 ## 安装
 
-把 `loot-beams-lite-forge-1.20.1-<版本>.jar` 放进 `.minecraft/mods`。
+把 `z80z-loot-beam-forge-1.20.1-<版本>.jar` 放进 `.minecraft/mods`。
+
+从旧的 Loot Beams Lite 升级时：删除 `loot-beams-lite-*.jar`，并把 `config/lootbeamslite-client.toml`
+重命名为 `config/z80z_loot_beam-client.toml`（模组 ID 变了，配置文件也跟着换名），原有设置就会保留。
 
 ## 使用
 
 - 游戏内按 `B` 即时开关光效
-- 模组列表 → Loot Beams Lite → 配置，打开图形界面（每个设置悬停都有说明）
-- 配置文件：`config/lootbeamslite-client.toml`
+- 模组列表 → Z80Z Loot Beam → 配置，打开图形界面（每个设置悬停都有说明）
+- 配置文件：`config/z80z_loot_beam-client.toml`
 
 ## 从源码构建
 
@@ -40,7 +43,7 @@ Minecraft 1.20.1 Forge 客户端模组：为掉落物显示按稀有度着色的
 ./gradlew build
 ```
 
-产物位于 `build/libs/loot-beams-lite-forge-1.20.1-<版本>.jar`。
+产物位于 `build/libs/z80z-loot-beam-forge-1.20.1-<版本>.jar`。
 
 ## 渲染说明
 

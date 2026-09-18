@@ -13,7 +13,7 @@ import net.minecraftforge.fml.loading.FMLEnvironment;
 
 @Mod(LootBeamsLite.MOD_ID)
 public final class LootBeamsLite {
-    public static final String MOD_ID = "lootbeamslite";
+    public static final String MOD_ID = "z80z_loot_beam";
 
     public LootBeamsLite() {
         ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);

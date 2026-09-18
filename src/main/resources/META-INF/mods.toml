@@ -3,23 +3,35 @@ loaderVersion="[47,)"
 license="MIT"
 
 [[mods]]
-modId="lootbeamslite"
+modId="z80z_loot_beam"
 version="${mod_version}"
-displayName="Loot Beams Lite"
-authors="BlockForge"
+displayName="Z80Z Loot Beam"
+authors="Z80Z99"
 displayTest="IGNORE_ALL_VERSION"
 description='''
-Lightweight, dependency-free loot beams for dropped items.
+Z80Z Loot Beam（战利品光束）—— 为掉落物显示按稀有度着色的光柱、地面光晕、名称与物品提示框。
+
+· 7 种光柱样式：经典光柱 / 纤细激光 / 柔光雾柱 / 锥形尖塔 / 螺旋光带 / 双螺旋 / 浮空光环
+· 颜色跟随稀有度与附魔，也可按物品、标签、模组自定义
+· 光柱淡入、近距离淡出、顶端渐隐、动态呼吸与旋转动画
+· 掉落物名称支持堆叠数量、背景边框、缩放，可设为仅准星看向时显示
+· 潜行看向掉落物时显示完整物品提示框
+· 新掉落物提示音，带独立声音黑名单
+· 中英文图形配置界面，所有设置均有悬停说明
+· 无第三方前置，仅客户端安装；针对光影包专门适配
+· 性能：按物品缓存规则与名称、单次遍历、视锥剔除
+
+Z80Z Loot Beam - dependency-free coloured beams, glow, names and tooltips for dropped items.
 '''
 
-[[dependencies.lootbeamslite]]
+[[dependencies.z80z_loot_beam]]
 modId="forge"
 mandatory=true
 versionRange="[47.3.0,)"
 ordering="NONE"
 side="CLIENT"
 
-[[dependencies.lootbeamslite]]
+[[dependencies.z80z_loot_beam]]
 modId="minecraft"
 mandatory=true
 versionRange="[1.20.1,1.20.2)"

@@ -25,10 +25,10 @@ import java.util.Optional;
 
 public final class ClientEvents {
     private static final KeyMapping TOGGLE = new KeyMapping(
-            "key.lootbeamslite.toggle",
+            "key.z80z_loot_beam.toggle",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_B,
-            "key.categories.lootbeamslite"
+            "key.categories.z80z_loot_beam"
     );
     private static boolean sessionEnabled = true;
 
@@ -60,8 +60,8 @@ public final class ClientEvents {
             sessionEnabled = !sessionEnabled;
             if (mc.player != null) {
                 mc.player.displayClientMessage(Component.translatable(sessionEnabled
-                        ? "message.lootbeamslite.enabled"
-                        : "message.lootbeamslite.disabled"), true);
+                        ? "message.z80z_loot_beam.enabled"
+                        : "message.z80z_loot_beam.disabled"), true);
             }
         }
     }

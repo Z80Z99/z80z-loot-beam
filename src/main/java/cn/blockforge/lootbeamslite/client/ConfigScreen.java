@@ -19,18 +19,18 @@ import java.util.List;
  *
  * <p>Every label, value and tooltip is a translation key, so the screen follows the language of
  * the client instead of being fixed to one language. The keys are derived from the option id: the
- * label lives in {@code lootbeamslite.config.option.<id>} and its explanation in
- * {@code lootbeamslite.config.option.<id>.tip}. Page titles, value words and the beam style names
+ * label lives in {@code z80z_loot_beam.config.option.<id>} and its explanation in
+ * {@code z80z_loot_beam.config.option.<id>.tip}. Page titles, value words and the beam style names
  * have their own keys.</p>
  */
 public final class ConfigScreen extends Screen {
-    private static final String OPTION = "lootbeamslite.config.option.";
+    private static final String OPTION = "z80z_loot_beam.config.option.";
     private static final String TIP = ".tip";
-    private static final String ON = "lootbeamslite.config.value.on";
-    private static final String OFF = "lootbeamslite.config.value.off";
-    private static final String TOGGLE_FORMAT = "lootbeamslite.config.format.toggle";
-    private static final String VALUE_FORMAT = "lootbeamslite.config.format.value";
-    private static final String STYLE = "lootbeamslite.config.style.";
+    private static final String ON = "z80z_loot_beam.config.value.on";
+    private static final String OFF = "z80z_loot_beam.config.value.off";
+    private static final String TOGGLE_FORMAT = "z80z_loot_beam.config.format.toggle";
+    private static final String VALUE_FORMAT = "z80z_loot_beam.config.format.value";
+    private static final String STYLE = "z80z_loot_beam.config.style.";
 
     private final Screen parent;
     private Page page = Page.BEAM;
@@ -41,7 +41,7 @@ public final class ConfigScreen extends Screen {
     private int listBottom;
 
     public ConfigScreen(Screen parent) {
-        super(Component.translatable("lootbeamslite.config.title"));
+        super(Component.translatable("z80z_loot_beam.config.title"));
         this.parent = parent;
     }
 
@@ -108,7 +108,7 @@ public final class ConfigScreen extends Screen {
         }
         scrollOffset = Math.min(scrollOffset, maxScroll());
         layoutRows();
-        addRenderableWidget(Button.builder(Component.translatable("lootbeamslite.config.button.save"), b -> onClose())
+        addRenderableWidget(Button.builder(Component.translatable("z80z_loot_beam.config.button.save"), b -> onClose())
                 .bounds(Math.max(contentLeft, panelRight - 120), height - 32, Math.min(112, contentWidth), 20).build());
     }
 
@@ -207,8 +207,8 @@ public final class ConfigScreen extends Screen {
         graphics.drawString(font, page.title(), contentLeft, 29, 0xFF78C7FF, false);
         super.render(graphics, mouseX, mouseY, partialTick);
         Component footer = Component.translatable(maxScroll() > 0
-                ? "lootbeamslite.config.hint.scroll"
-                : "lootbeamslite.config.hint.hover");
+                ? "z80z_loot_beam.config.hint.scroll"
+                : "z80z_loot_beam.config.hint.hover");
         graphics.drawString(font, footer, contentLeft, height - 27, 0xFF9CAAB8, false);
         if (maxScroll() > 0) {
             int trackX = panelRight - 6;
@@ -223,10 +223,10 @@ public final class ConfigScreen extends Screen {
     @Override public boolean isPauseScreen() { return false; }
 
     private enum Page {
-        BEAM("lootbeamslite.config.page.beam.title", "lootbeamslite.config.page.beam.help"),
-        FILTER("lootbeamslite.config.page.filter.title", "lootbeamslite.config.page.filter.help"),
-        INFO("lootbeamslite.config.page.info.title", "lootbeamslite.config.page.info.help"),
-        SOUND("lootbeamslite.config.page.sound.title", "lootbeamslite.config.page.sound.help");
+        BEAM("z80z_loot_beam.config.page.beam.title", "z80z_loot_beam.config.page.beam.help"),
+        FILTER("z80z_loot_beam.config.page.filter.title", "z80z_loot_beam.config.page.filter.help"),
+        INFO("z80z_loot_beam.config.page.info.title", "z80z_loot_beam.config.page.info.help"),
+        SOUND("z80z_loot_beam.config.page.sound.title", "z80z_loot_beam.config.page.sound.help");
 
         private final String titleKey, helpKey;
 
