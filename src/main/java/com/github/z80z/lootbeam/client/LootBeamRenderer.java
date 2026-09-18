@@ -477,8 +477,10 @@ public final class LootBeamRenderer {
                 float level = pulse * slot.fade;
                 glowShader(glowOut, matrix, ring, r * level, g * level, b * level);
             } else {
-                groundDisc(out, matrix, radius, r, g, b, 0.42f * pulse * slot.fade, phase);
-                groundRing(out, matrix, ring, r, g, b, 0.46f * slot.fade, phase);
+                // The glow pass hands over the same buffer as the beam pass in this mode, and it
+                // arrives through glowOut, so the disc and the ring have to use that consumer.
+                groundDisc(glowOut, matrix, radius, r, g, b, 0.42f * pulse * slot.fade, phase);
+                groundRing(glowOut, matrix, ring, r, g, b, 0.46f * slot.fade, phase);
             }
         }
         pose.popPose();
