@@ -1,0 +1,27 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="lootbeamslite"
+version="${mod_version}"
+displayName="Loot Beams Lite"
+authors="BlockForge"
+displayTest="IGNORE_ALL_VERSION"
+description='''
+Lightweight, dependency-free loot beams for dropped items.
+'''
+
+[[dependencies.lootbeamslite]]
+modId="forge"
+mandatory=true
+versionRange="[47.3.0,)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.lootbeamslite]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.20.2)"
+ordering="NONE"
+side="CLIENT"

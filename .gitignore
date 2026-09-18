@@ -1,0 +1,20 @@
+# Gradle / 构建产物
+.gradle/
+build/
+run/
+
+# 本地备份与日志
+previous-jars/
+*.log
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# 系统
+Thumbs.db
+.DS_Store
