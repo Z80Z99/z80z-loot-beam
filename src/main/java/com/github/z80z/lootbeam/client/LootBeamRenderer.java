@@ -337,16 +337,45 @@ public final class LootBeamRenderer {
 
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
         if (beams) {
-            VertexConsumer beamBuffer = buffers.getBuffer(settings.shaderMode ? SHADER_BEAM_TYPE : BEAM_TYPE);
-            VertexConsumer glowBuffer = settings.shaderMode ? buffers.getBuffer(SHADER_GLOW_TYPE) : beamBuffer;
+            RenderType beamType = settings.shaderMode ? SHADER_BEAM_TYPE : BEAM_TYPE;
+            // The beam and the glow go through the pack's particle program, which is only ever
+            // bound to one buffer at a time, so the two are submitted as separate passes. Each
+            // pass is flushed immediately: that keeps them from sharing a buffer, and it makes
+            // sure they are on screen before the names are drawn.
+            VertexConsumer beamBuffer = buffers.getBuffer(beamType);
             for (int i = 0; i < count; i++) {
                 Slot slot = SLOTS.get(i);
                 if (!slot.beam) continue;
-                drawBeam(pose, beamBuffer, glowBuffer, settings, slot);
+                drawBeam(pose, beamBuffer, null, settings, slot);
+            }
+            buffers.endBatch(beamType);
+            if (settings.glow) {
+                RenderType glowType = settings.shaderMode ? SHADER_GLOW_TYPE : BEAM_TYPE;
+                VertexConsumer glowBuffer = buffers.getBuffer(glowType);
+                for (int i = 0; i < count; i++) {
+                    Slot slot = SLOTS.get(i);
+                    if (!slot.beam) continue;
+                    drawBeam(pose, null, glowBuffer, settings, slot);
+                }
+                buffers.endBatch(glowType);
             }
         }
         if (settings.names) {
             Quaternionf orientation = mc.getEntityRenderDispatcher().cameraOrientation();
+            if (settings.shaderMode) {
+                // Under a pack the beam writes the pack's auxiliary buffers, and the vanilla text
+                // shader only writes colour. Without this the pack keeps reading those pixels as
+                // translucent particles and blends the beam back over the text, which showed up
+                // as a bright band across the name plate. A black, fully opaque quad through the
+                // pack's particle program marks the area as opaque again; black adds nothing, so
+                // nothing of the quad itself is visible.
+                VertexConsumer plateBuffer = buffers.getBuffer(SHADER_GLOW_TYPE);
+                for (int i = 0; i < count; i++) {
+                    Slot slot = SLOTS.get(i);
+                    if (slot.name != null) drawNamePlate(pose, plateBuffer, orientation, settings, slot);
+                }
+                buffers.endBatch(SHADER_GLOW_TYPE);
+            }
             for (int i = 0; i < count; i++) {
                 Slot slot = SLOTS.get(i);
                 if (slot.name == null) continue;
@@ -402,7 +431,7 @@ public final class LootBeamRenderer {
         pose.translate(slot.x, slot.y + 0.12 + settings.beamYOffset, slot.z);
         Matrix4f matrix = pose.last().pose();
 
-        if (settings.beams && h > 0.01f) {
+        if (out != null && settings.beams && h > 0.01f) {
             BeamStyle style = settings.style;
             if (style == BeamStyle.SPIRAL || style == BeamStyle.DOUBLE_HELIX) {
                 int strands = style == BeamStyle.DOUBLE_HELIX ? 2 : 1;
@@ -441,7 +470,7 @@ public final class LootBeamRenderer {
                 }
             }
         }
-        if (settings.glow) {
+        if (glowOut != null && settings.glow) {
             float radius = settings.glowRadius;
             float ring = radius * (1.08f + 0.06f * Mth.sin(phase));
             if (settings.shaderMode) {
@@ -721,6 +750,32 @@ public final class LootBeamRenderer {
         int background = settings.nameBorder ? ((int) (settings.nameBackground * 255) << 24) : 0;
         font.drawInBatch(slot.name, x, 0, textAlpha | slot.color, false, pose.last().pose(), buffers,
                 Font.DisplayMode.SEE_THROUGH, background, LightTexture.FULL_BRIGHT);
+        pose.popPose();
+    }
+
+    /**
+     * Black, fully opaque quad covering one name plate, drawn through the pack's particle program
+     * before the text. It exists purely to make the pack treat those pixels as opaque again: the
+     * alpha of one drives the pack's translucency term to zero, which stops it from blending the
+     * beam back over the text. Black is chosen so the additive blend of that program adds nothing
+     * visible; the actual text and its background are drawn afterwards by the font.
+     */
+    private static void drawNamePlate(PoseStack pose, VertexConsumer out, Quaternionf orientation,
+                                      Settings settings, Slot slot) {
+        pose.pushPose();
+        pose.translate(slot.x, slot.y + settings.nameYOffset, slot.z);
+        pose.mulPose(orientation);
+        float scale = settings.nameScale;
+        pose.scale(-0.025f * scale, -0.025f * scale, 0.025f * scale);
+        Matrix4f matrix = pose.last().pose();
+        float left = -slot.nameWidth / 2.0f - 1.0f;
+        float right = left + slot.nameWidth + 2.0f;
+        float top = -1.0f;
+        float bottom = 10.0f;
+        vertexShader(out, matrix, left, top, 0.0f, 0.5f, 0.5f, 0.0f, 0.0f, 0.0f);
+        vertexShader(out, matrix, right, top, 0.0f, 0.5f, 0.5f, 0.0f, 0.0f, 0.0f);
+        vertexShader(out, matrix, right, bottom, 0.0f, 0.5f, 0.5f, 0.0f, 0.0f, 0.0f);
+        vertexShader(out, matrix, left, bottom, 0.0f, 0.5f, 0.5f, 0.0f, 0.0f, 0.0f);
         pose.popPose();
     }
 
