@@ -24,6 +24,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.level.entity.EntityTypeTest;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
@@ -238,6 +239,10 @@ public final class LootBeamRenderer {
 
     private static final List<Slot> SLOTS = new ArrayList<>();
     private static final AABB BOX = new AABB(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+    /** Reused query area and result list for the per frame item scan. */
+    private static final AABB QUERY = new AABB(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+    private static final List<ItemEntity> CANDIDATES = new ArrayList<>();
+    private static final EntityTypeTest<Entity, ItemEntity> ITEM_TYPE = EntityTypeTest.forClass(ItemEntity.class);
 
     private static Slot slot(int index) {
         while (SLOTS.size() <= index) SLOTS.add(new Slot());
@@ -284,9 +289,23 @@ public final class LootBeamRenderer {
         double rangeSq = Math.max(beamRange, nameRange);
         rangeSq *= rangeSq;
 
+        // Query the level itself instead of the render list: culling mods (EntityCulling and
+        // friends) remove entries from the render list, which used to make beams and names vanish
+        // at certain angles even though the item was right there. Occlusion still applies, because
+        // the beam is depth tested and the name is an overlay.
+        double reach = Math.sqrt(rangeSq) + 2.0;
+        QUERY.setMinX(camX - reach);
+        QUERY.setMinY(camY - reach);
+        QUERY.setMinZ(camZ - reach);
+        QUERY.setMaxX(camX + reach);
+        QUERY.setMaxY(camY + reach);
+        QUERY.setMaxZ(camZ + reach);
+        CANDIDATES.clear();
+        mc.level.getEntities(ITEM_TYPE, QUERY, item -> true, CANDIDATES);
+
         int count = 0;
-        for (Entity entity : mc.level.entitiesForRendering()) {
-            if (!(entity instanceof ItemEntity item) || !item.isAlive()) continue;
+        for (ItemEntity item : CANDIDATES) {
+            if (!item.isAlive()) continue;
             if (settings.onGround && !item.onGround()) continue;
             double x = Mth.lerp(partialTick, item.xOld, item.getX()) - camX;
             double y = Mth.lerp(partialTick, item.yOld, item.getY()) - camY;

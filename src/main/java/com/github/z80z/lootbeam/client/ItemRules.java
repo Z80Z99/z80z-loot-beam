@@ -1,10 +1,13 @@
 package com.github.z80z.lootbeam.client;
 
 import com.github.z80z.lootbeam.config.ClientConfig;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.*;
+import org.joml.Vector3f;
 
 import java.util.List;
 import java.util.HashMap;
@@ -55,12 +58,26 @@ public final class ItemRules {
         };
     }
 
+    /**
+     * Whether the player is looking at the item.
+     *
+     * <p>The test runs against the camera instead of the player: third person view, view bobbing
+     * and camera mods all move the camera away from the player, while the beams and names are drawn
+     * from the camera, so testing the player's view vector hid the name in those cases. Items right
+     * next to the player always count as looked at, so the name never disappears at your feet.</p>
+     */
     public static boolean isLookedAt(net.minecraft.world.entity.item.ItemEntity item) {
-        var mc = net.minecraft.client.Minecraft.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return false;
-        var eye = mc.player.getEyePosition();
-        var target = item.getBoundingBox().getCenter().subtract(eye).normalize();
-        double dot = mc.player.getViewVector(1).dot(target);
+        if (mc.player.distanceTo(item) < 3.0) return true;
+        Camera camera = mc.gameRenderer.getMainCamera();
+        double dx = item.getX() - camera.getPosition().x;
+        double dy = item.getY() + item.getBbHeight() * 0.5 - camera.getPosition().y;
+        double dz = item.getZ() - camera.getPosition().z;
+        double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (length < 1.0E-4) return true;
+        Vector3f look = camera.getLookVector();
+        double dot = (dx * look.x + dy * look.y + dz * look.z) / length;
         return 1.0 - dot <= ClientConfig.LOOK_SENSITIVITY.get();
     }
 
