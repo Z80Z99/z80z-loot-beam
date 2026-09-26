@@ -28,6 +28,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.entity.EntityTypeTest;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import org.slf4j.Logger;
 
 import java.lang.reflect.Method;
@@ -243,7 +244,6 @@ public final class LootBeamRenderer {
     }
 
     private static final List<Slot> SLOTS = new ArrayList<>();
-    private static final AABB BOX = new AABB(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
     /** Reused query area and result list for the per frame item scan. */
     private static final AABB QUERY = new AABB(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
     private static final List<ItemEntity> CANDIDATES = new ArrayList<>();
@@ -277,9 +277,13 @@ public final class LootBeamRenderer {
      * Draws every beam and then every name of this frame.
      *
      * <p>The world is scanned once: the item rules, the colour and the display name come from
-     * {@link ItemCache}, the frustum throws away what the player cannot see, and the
+     * {@link ItemCache}, items behind the camera are skipped with a cheap dot product, and the
      * configuration is read a single time into {@link Settings}. Beams are submitted before the
      * names, so the text still ends up on top of the columns.</p>
+     *
+     * <p>The frustum from the render event is accepted for callers but no longer used: the exact
+     * frustum test was far more strict than the dot product and could hide items the player was
+     * looking at.</p>
      */
     public static void render(PoseStack pose, float partialTick, Frustum frustum) {
         Minecraft mc = Minecraft.getInstance();
@@ -320,20 +324,43 @@ public final class LootBeamRenderer {
         int count = 0;
         int beamCount = 0;
         int nameCount = 0;
+        int offGround = 0;
+        int outOfRange = 0;
+        int filtered = 0;
+        int behind = 0;
+        Vector3f look = camera.getLookVector();
         for (ItemEntity item : CANDIDATES) {
             if (!item.isAlive()) continue;
-            if (settings.onGround && !item.onGround()) continue;
+            if (settings.onGround && !settled(item)) {
+                offGround++;
+                continue;
+            }
             double x = Mth.lerp(partialTick, item.xOld, item.getX()) - camX;
             double y = Mth.lerp(partialTick, item.yOld, item.getY()) - camY;
             double z = Mth.lerp(partialTick, item.zOld, item.getZ()) - camZ;
             double distanceSq = x * x + y * y + z * z;
-            if (distanceSq > rangeSq) continue;
+            if (distanceSq > rangeSq) {
+                outOfRange++;
+                continue;
+            }
             double distance = Math.sqrt(distanceSq);
             boolean drawBeam = beams && distance <= beamRange;
             boolean drawName = settings.names && distance <= nameRange;
-            if (!drawBeam && !drawName) continue;
-            if (!ItemCache.shouldRender(item)) continue;
-            if (!visible(frustum, camX, camY, camZ, x, y, z, settings, drawBeam)) continue;
+            if (!drawBeam && !drawName) {
+                outOfRange++;
+                continue;
+            }
+            if (!ItemCache.shouldRender(item)) {
+                filtered++;
+                continue;
+            }
+            // A plain "is it behind the camera" test replaced the exact frustum test: a dot product
+            // is much more forgiving than the real frustum, so it cannot hide something the player
+            // is looking at, while items clearly behind the camera are still skipped.
+            if (distance > 1.0 && (x * look.x + y * look.y + z * look.z) / distance < -0.25) {
+                behind++;
+                continue;
+            }
 
             Slot slot = slot(count++);
             slot.x = x;
@@ -370,7 +397,8 @@ public final class LootBeamRenderer {
             if (slot.beam) beamCount++;
             if (slot.name != null) nameCount++;
         }
-        reportCandidates(settings, CANDIDATES.size(), count, beamCount, nameCount);
+        reportCandidates(settings, CANDIDATES.size(), count, beamCount, nameCount,
+                offGround, outOfRange, filtered, behind);
         if (count == 0) return;
 
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
@@ -424,25 +452,13 @@ public final class LootBeamRenderer {
     }
 
     /**
-     * Cheap frustum test around the box one item occupies. The frustum works in world space, so
-     * the camera relative position used by the beam has to be turned back into world coordinates.
+     * True while the item is at rest: standing on a block, or floating in water, lava or powder
+     * snow. Plain {@code onGround()} is false for anything resting in a fluid, so items floating on
+     * water used to be filtered out by the "only after it landed" option even though they were not
+     * moving any more.
      */
-    private static boolean visible(Frustum frustum, double camX, double camY, double camZ,
-                                   double x, double y, double z, Settings settings, boolean beam) {
-        if (frustum == null) return true;
-        double radius = Math.max(settings.radius, 0.5f);
-        double height = beam ? Math.max(settings.height, 1.0f)
-                : Math.max(1.0f, settings.nameYOffset + 1.5f);
-        double worldX = camX + x;
-        double worldY = camY + y;
-        double worldZ = camZ + z;
-        BOX.setMinX(worldX - radius);
-        BOX.setMinY(worldY);
-        BOX.setMinZ(worldZ - radius);
-        BOX.setMaxX(worldX + radius);
-        BOX.setMaxY(worldY + height);
-        BOX.setMaxZ(worldZ + radius);
-        return frustum.isVisible(BOX);
+    private static boolean settled(ItemEntity item) {
+        return item.onGround() || item.isInWater() || item.isInLava() || item.isInPowderSnow;
     }
 
     /** 0 at point blank range, smoothly rising to 1 at the configured distance. */
@@ -824,12 +840,15 @@ public final class LootBeamRenderer {
      * were found, how many survived the filters and how many beams and names were submitted. When
      * nothing shows up on screen this says which step dropped them, instead of guessing.
      */
-    private static void reportCandidates(Settings settings, int candidates, int prepared, int beams, int names) {
+    private static void reportCandidates(Settings settings, int candidates, int prepared, int beams, int names,
+                                         int offGround, int outOfRange, int filtered, int behind) {
         long now = System.nanoTime();
         if (now - lastReport < 5_000_000_000L) return;
         lastReport = now;
-        LOGGER.info("[Z80Z Loot Beam] candidates={} prepared={} beams={} names={} shader={}",
-                candidates, prepared, beams, names, settings.shaderMode);
+        LOGGER.info("[Z80Z Loot Beam] candidates={} prepared={} beams={} names={} shader={} "
+                        + "dropped[offGround={} range={} filtered={} behind={}]",
+                candidates, prepared, beams, names, settings.shaderMode,
+                offGround, outOfRange, filtered, behind);
     }
 
     private LootBeamRenderer() {}
