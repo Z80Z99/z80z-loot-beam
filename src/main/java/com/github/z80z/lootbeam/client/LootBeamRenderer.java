@@ -8,6 +8,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.logging.LogUtils;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -27,10 +28,13 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.entity.EntityTypeTest;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.slf4j.Logger;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Loot beam renderer.
@@ -48,6 +52,7 @@ import java.util.List;
  * with and without a pack.</p>
  */
 public final class LootBeamRenderer {
+    private static final Logger LOGGER = LogUtils.getLogger();
     /** Radial segments of the cylinder cross section. */
     private static final int RADIAL_SEGMENTS = 20;
     /** Radial segments of the shader path; it shades a whole panel with one colour. */
@@ -242,7 +247,10 @@ public final class LootBeamRenderer {
     /** Reused query area and result list for the per frame item scan. */
     private static final AABB QUERY = new AABB(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
     private static final List<ItemEntity> CANDIDATES = new ArrayList<>();
+    private static final Set<Entity> SEEN = new HashSet<>();
     private static final EntityTypeTest<Entity, ItemEntity> ITEM_TYPE = EntityTypeTest.forClass(ItemEntity.class);
+    /** Rate limit for the diagnostic line below. */
+    private static long lastReport;
 
     private static Slot slot(int index) {
         while (SLOTS.size() <= index) SLOTS.add(new Slot());
@@ -289,10 +297,11 @@ public final class LootBeamRenderer {
         double rangeSq = Math.max(beamRange, nameRange);
         rangeSq *= rangeSq;
 
-        // Query the level itself instead of the render list: culling mods (EntityCulling and
-        // friends) remove entries from the render list, which used to make beams and names vanish
-        // at certain angles even though the item was right there. Occlusion still applies, because
-        // the beam is depth tested and the name is an overlay.
+        // Take the union of the level lookup and the render list. Culling mods (EntityCulling and
+        // friends) remove entries from the render list, which used to make beams and names vanish at
+        // certain angles even though the item was right there, while the level lookup is the full
+        // set of loaded entities. Using both means a failing or filtered source can never hide an
+        // item completely.
         double reach = Math.sqrt(rangeSq) + 2.0;
         QUERY.setMinX(camX - reach);
         QUERY.setMinY(camY - reach);
@@ -301,9 +310,16 @@ public final class LootBeamRenderer {
         QUERY.setMaxY(camY + reach);
         QUERY.setMaxZ(camZ + reach);
         CANDIDATES.clear();
+        SEEN.clear();
         mc.level.getEntities(ITEM_TYPE, QUERY, item -> true, CANDIDATES);
+        for (ItemEntity item : CANDIDATES) SEEN.add(item);
+        for (Entity entity : mc.level.entitiesForRendering()) {
+            if (entity instanceof ItemEntity item && !SEEN.contains(item)) CANDIDATES.add(item);
+        }
 
         int count = 0;
+        int beamCount = 0;
+        int nameCount = 0;
         for (ItemEntity item : CANDIDATES) {
             if (!item.isAlive()) continue;
             if (settings.onGround && !item.onGround()) continue;
@@ -351,7 +367,10 @@ public final class LootBeamRenderer {
             boolean name = drawName && (!settings.namesOnLook || ItemRules.isLookedAt(item));
             slot.name = name ? ItemCache.name(item) : null;
             slot.nameWidth = name ? ItemCache.nameWidth(item) : 0;
+            if (slot.beam) beamCount++;
+            if (slot.name != null) nameCount++;
         }
+        reportCandidates(settings, CANDIDATES.size(), count, beamCount, nameCount);
         if (count == 0) return;
 
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
@@ -798,6 +817,19 @@ public final class LootBeamRenderer {
         vertexShader(out, matrix, right, bottom, 0.0f, 0.5f, 0.5f, 0.0f, 0.0f, 0.0f);
         vertexShader(out, matrix, left, bottom, 0.0f, 0.5f, 0.5f, 0.0f, 0.0f, 0.0f);
         pose.popPose();
+    }
+
+    /**
+     * Temporary diagnostic, rate limited to one line every few seconds: it records how many items
+     * were found, how many survived the filters and how many beams and names were submitted. When
+     * nothing shows up on screen this says which step dropped them, instead of guessing.
+     */
+    private static void reportCandidates(Settings settings, int candidates, int prepared, int beams, int names) {
+        long now = System.nanoTime();
+        if (now - lastReport < 5_000_000_000L) return;
+        lastReport = now;
+        LOGGER.info("[Z80Z Loot Beam] candidates={} prepared={} beams={} names={} shader={}",
+                candidates, prepared, beams, names, settings.shaderMode);
     }
 
     private LootBeamRenderer() {}
