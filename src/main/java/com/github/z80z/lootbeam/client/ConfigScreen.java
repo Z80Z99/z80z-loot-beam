@@ -94,6 +94,8 @@ public final class ConfigScreen extends Screen {
                 toggle("stackCount", ClientConfig.STACK_COUNT);
                 toggle("crouchTooltips", ClientConfig.CROUCH_TOOLTIPS);
                 number("nameDistance", ClientConfig.NAME_DISTANCE, 2, 64);
+                number("nameFadeDistance", ClientConfig.NAME_FADE_DISTANCE, 0, 64);
+                number("nameNearFadeDistance", ClientConfig.NAME_NEAR_FADE_DISTANCE, 0, 64);
                 number("nameScale", ClientConfig.NAME_SCALE, 0.1, 5);
                 number("nameYOffset", ClientConfig.NAME_Y_OFFSET, -5, 10);
                 number("nameBackgroundAlpha", ClientConfig.NAME_BACKGROUND_ALPHA, 0, 1);

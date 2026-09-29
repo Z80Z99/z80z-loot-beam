@@ -30,6 +30,12 @@ public final class ClientEvents {
             GLFW.GLFW_KEY_B,
             "key.categories.z80z_loot_beam"
     );
+    private static final KeyMapping OPEN_CONFIG = new KeyMapping(
+            "key.z80z_loot_beam.open_config",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_K,
+            "key.categories.z80z_loot_beam"
+    );
     private static boolean sessionEnabled = true;
 
     /** Ticks between rebuilds of the crouch tooltip text. */
@@ -55,6 +61,9 @@ public final class ClientEvents {
             updateCrouchTooltip(mc);
         } else {
             resetCrouchTooltip();
+        }
+        while (OPEN_CONFIG.consumeClick()) {
+            if (mc.screen == null) mc.setScreen(new ConfigScreen(null));
         }
         while (TOGGLE.consumeClick()) {
             sessionEnabled = !sessionEnabled;
@@ -136,6 +145,7 @@ public final class ClientEvents {
         @SubscribeEvent
         public static void registerKeys(RegisterKeyMappingsEvent event) {
             event.register(TOGGLE);
+            event.register(OPEN_CONFIG);
         }
     }
 

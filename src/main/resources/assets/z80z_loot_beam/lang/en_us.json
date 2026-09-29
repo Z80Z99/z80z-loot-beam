@@ -1,5 +1,6 @@
 {
   "key.z80z_loot_beam.toggle": "Toggle loot beams",
+  "key.z80z_loot_beam.open_config": "Open loot beam settings",
   "key.categories.z80z_loot_beam": "Z80Z Loot Beam",
   "message.z80z_loot_beam.enabled": "Loot beams enabled",
   "message.z80z_loot_beam.disabled": "Loot beams disabled",
@@ -78,6 +79,10 @@
   "z80z_loot_beam.config.option.crouchTooltips.tip": "While crouching and looking at a drop, shows the same full tooltip and attributes as the inventory does.",
   "z80z_loot_beam.config.option.nameDistance": "Name distance",
   "z80z_loot_beam.config.option.nameDistance.tip": "Only items within this many blocks show a name or the crouch tooltip.",
+  "z80z_loot_beam.config.option.nameFadeDistance": "Name fade out distance",
+  "z80z_loot_beam.config.option.nameFadeDistance.tip": "Distance over which names fade before reaching their maximum display range, in blocks. Set to 0 to disable.",
+  "z80z_loot_beam.config.option.nameNearFadeDistance": "Name close fade distance",
+  "z80z_loot_beam.config.option.nameNearFadeDistance.tip": "Names fade out when the player gets this close to a dropped item, in blocks. Set to 0 to disable.",
   "z80z_loot_beam.config.option.nameScale": "Name scale",
   "z80z_loot_beam.config.option.nameScale.tip": "Size of the world space names. 1 is the default; very large values can block the view.",
   "z80z_loot_beam.config.option.nameYOffset": "Name height offset",

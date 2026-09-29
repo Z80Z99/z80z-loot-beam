@@ -1,5 +1,6 @@
 {
   "key.z80z_loot_beam.toggle": "开关战利品光束",
+  "key.z80z_loot_beam.open_config": "打开战利品光束配置",
   "key.categories.z80z_loot_beam": "Z80Z Loot Beam",
   "message.z80z_loot_beam.enabled": "战利品光束：已开启",
   "message.z80z_loot_beam.disabled": "战利品光束：已关闭",
@@ -78,6 +79,10 @@
   "z80z_loot_beam.config.option.crouchTooltips.tip": "潜行并用准星看向掉落物时，在屏幕上显示与物品栏相同的完整提示信息和属性。",
   "z80z_loot_beam.config.option.nameDistance": "名称显示距离",
   "z80z_loot_beam.config.option.nameDistance.tip": "只有距离玩家不超过该数值的物品才显示名称和潜行提示框，单位为方块。",
+  "z80z_loot_beam.config.option.nameFadeDistance": "名称远距离淡出",
+  "z80z_loot_beam.config.option.nameFadeDistance.tip": "名牌在显示距离边缘前开始淡出的长度，单位为方块；设为 0 可关闭。",
+  "z80z_loot_beam.config.option.nameNearFadeDistance": "名称贴近淡出",
+  "z80z_loot_beam.config.option.nameNearFadeDistance.tip": "玩家贴近掉落物时名牌开始淡出的距离，单位为方块；设为 0 可关闭。",
   "z80z_loot_beam.config.option.nameScale": "名称缩放",
   "z80z_loot_beam.config.option.nameScale.tip": "调整世界中物品名称的大小。1 为默认大小；过大的数值可能遮挡画面。",
   "z80z_loot_beam.config.option.nameYOffset": "名称纵向偏移",
