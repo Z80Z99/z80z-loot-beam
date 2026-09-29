@@ -11,7 +11,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -28,6 +28,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.entity.EntityTypeTest;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.joml.Vector4f;
 import org.joml.Vector3f;
 import org.slf4j.Logger;
 
@@ -225,8 +226,8 @@ public final class LootBeamRenderer {
     private record Settings(boolean beams, BeamStyle style, float height, boolean shortCommon, float radius,
                             boolean dynamic, int halfRound, float fadeInTicks, float fadeDistance, float alpha,
                             boolean solid, boolean glow, float glowRadius, boolean onGround, boolean shaderMode,
-                            double maxDistance, boolean names, boolean namesOnLook, float nameDistance,
-                            float nameScale, float nameAlpha, float nameBackground, boolean nameBorder,
+                            double maxDistance, boolean names, boolean namesOnLook, float nameDistance, float nameFadeDistance,
+                            float nameNearFadeDistance, float nameScale, float nameAlpha, float nameBackground, boolean nameBorder,
                             boolean stackCount, float beamYOffset, float nameYOffset) {}
 
     /** One visible item of the current frame; the list is reused between frames. */
@@ -241,6 +242,7 @@ public final class LootBeamRenderer {
         double x, y, z;
         boolean common;
         boolean beam;
+        float nameFade;
     }
 
     private static final List<Slot> SLOTS = new ArrayList<>();
@@ -251,6 +253,9 @@ public final class LootBeamRenderer {
     private static final EntityTypeTest<Entity, ItemEntity> ITEM_TYPE = EntityTypeTest.forClass(ItemEntity.class);
     /** Rate limit for the diagnostic line below. */
     private static long lastReport;
+
+    private record OverlayName(Component text, int color, int background, int width, float x, float y, float sx, float sy) {}
+    private static final List<OverlayName> OVERLAY_NAMES = new ArrayList<>();
 
     private static Slot slot(int index) {
         while (SLOTS.size() <= index) SLOTS.add(new Slot());
@@ -267,25 +272,27 @@ public final class LootBeamRenderer {
                 ClientConfig.SOLID_BEAM.get(), ClientConfig.ENABLE_GLOW.get(),
                 ClientConfig.GLOW_RADIUS.get().floatValue(), ClientConfig.REQUIRE_ON_GROUND.get(), shaderMode,
                 ClientConfig.MAX_DISTANCE.get(), ClientConfig.SHOW_NAME.get(), ClientConfig.NAME_ON_LOOK.get(),
-                ClientConfig.NAME_DISTANCE.get().floatValue(), ClientConfig.NAME_SCALE.get().floatValue(),
+                ClientConfig.NAME_DISTANCE.get().floatValue(), ClientConfig.NAME_FADE_DISTANCE.get().floatValue(),
+                ClientConfig.NAME_NEAR_FADE_DISTANCE.get().floatValue(), ClientConfig.NAME_SCALE.get().floatValue(),
                 ClientConfig.NAME_TEXT_ALPHA.get().floatValue(), ClientConfig.NAME_BACKGROUND_ALPHA.get().floatValue(),
                 ClientConfig.TEXT_BORDER.get(), ClientConfig.STACK_COUNT.get(),
                 ClientConfig.BEAM_Y_OFFSET.get().floatValue(), ClientConfig.NAME_Y_OFFSET.get().floatValue());
     }
 
     /**
-     * Draws every beam and then every name of this frame.
+     * Draws every beam and queues visible names for the final HUD pass.
      *
      * <p>The world is scanned once: the item rules, the colour and the display name come from
      * {@link ItemCache}, items behind the camera are skipped with a cheap dot product, and the
      * configuration is read a single time into {@link Settings}. Beams are submitted before the
-     * names, so the text still ends up on top of the columns.</p>
+     * names. The HUD pass draws labels after shader composition so beams cannot cover them.</p>
      *
      * <p>The frustum from the render event is accepted for callers but no longer used: the exact
      * frustum test was far more strict than the dot product and could hide items the player was
      * looking at.</p>
      */
     public static void render(PoseStack pose, float partialTick, Frustum frustum) {
+        OVERLAY_NAMES.clear();
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
         Settings settings = readSettings(shaderPackActive());
@@ -394,6 +401,11 @@ public final class LootBeamRenderer {
             boolean name = drawName && (!settings.namesOnLook || ItemRules.isLookedAt(item));
             slot.name = name ? ItemCache.name(item) : null;
             slot.nameWidth = name ? ItemCache.nameWidth(item) : 0;
+            float nameFade = name ? distanceNameFade((float) distance, settings.nameDistance, settings.nameFadeDistance) : 0f;
+            if (name && settings.nameNearFadeDistance > 0.001f) {
+                nameFade *= closeRangeFade(Mth.sqrt((float) (x * x + z * z)), settings.nameNearFadeDistance);
+            }
+            slot.nameFade = nameFade;
             if (slot.beam) beamCount++;
             if (slot.name != null) nameCount++;
         }
@@ -428,24 +440,10 @@ public final class LootBeamRenderer {
         }
         if (settings.names) {
             Quaternionf orientation = mc.getEntityRenderDispatcher().cameraOrientation();
-            if (settings.shaderMode) {
-                // Under a pack the beam writes the pack's auxiliary buffers, and the vanilla text
-                // shader only writes colour. Without this the pack keeps reading those pixels as
-                // translucent particles and blends the beam back over the text, which showed up
-                // as a bright band across the name plate. A black, fully opaque quad through the
-                // pack's particle program marks the area as opaque again; black adds nothing, so
-                // nothing of the quad itself is visible.
-                VertexConsumer plateBuffer = buffers.getBuffer(SHADER_GLOW_TYPE);
-                for (int i = 0; i < count; i++) {
-                    Slot slot = SLOTS.get(i);
-                    if (slot.name != null) drawNamePlate(pose, plateBuffer, orientation, settings, slot);
-                }
-                buffers.endBatch(SHADER_GLOW_TYPE);
-            }
+            Matrix4f projection = new Matrix4f(RenderSystem.getProjectionMatrix());
             for (int i = 0; i < count; i++) {
                 Slot slot = SLOTS.get(i);
-                if (slot.name == null) continue;
-                drawName(pose, buffers, orientation, mc.font, settings, slot);
+                if (slot.name != null) queueNameOverlay(pose, projection, orientation, settings, slot, mc);
             }
         }
         buffers.endBatch();
@@ -459,6 +457,15 @@ public final class LootBeamRenderer {
      */
     private static boolean settled(ItemEntity item) {
         return item.onGround() || item.isInWater() || item.isInLava() || item.isInPowderSnow;
+    }
+
+    /** Keeps labels solid nearby, then fades them smoothly to transparent at their range limit. */
+    private static float distanceNameFade(float distance, float range, float fadeDistance) {
+        if (fadeDistance <= 0.001f) return 1.0f;
+        float fadeStart = Math.max(range - fadeDistance, 0f);
+        if (distance <= fadeStart) return 1.0f;
+        float t = Mth.clamp((distance - fadeStart) / Math.max(range - fadeStart, 0.001f), 0f, 1f);
+        return 1.0f - t * t * (3.0f - 2.0f * t);
     }
 
     /** 0 at point blank range, smoothly rising to 1 at the configured distance. */
@@ -794,45 +801,61 @@ public final class LootBeamRenderer {
         out.vertex(m, x, y, z).color(r, g, b, weight).endVertex();
     }
 
-    private static void drawName(PoseStack pose, MultiBufferSource buffers, Quaternionf orientation,
-                                 Font font, Settings settings, Slot slot) {
+    private static void queueNameOverlay(PoseStack pose, Matrix4f projection, Quaternionf orientation,
+                                         Settings settings, Slot slot, Minecraft mc) {
         pose.pushPose();
-        pose.translate(slot.x, slot.y + settings.nameYOffset, slot.z);
+        Vector3f cameraLook = mc.gameRenderer.getMainCamera().getLookVector();
+        float towardPlayer = 0.65f;
+        pose.translate(slot.x - cameraLook.x * towardPlayer,
+                slot.y + settings.nameYOffset - cameraLook.y * towardPlayer,
+                slot.z - cameraLook.z * towardPlayer);
         pose.mulPose(orientation);
         float scale = settings.nameScale;
         pose.scale(-0.025f * scale, -0.025f * scale, 0.025f * scale);
-        float x = -slot.nameWidth / 2.0f;
-        int textAlpha = (int) (settings.nameAlpha * 255) << 24;
-        int background = settings.nameBorder ? ((int) (settings.nameBackground * 255) << 24) : 0;
-        font.drawInBatch(slot.name, x, 0, textAlpha | slot.color, false, pose.last().pose(), buffers,
-                Font.DisplayMode.SEE_THROUGH, background, LightTexture.FULL_BRIGHT);
+        Matrix4f matrix = new Matrix4f(projection).mul(pose.last().pose());
+        Vector4f origin = new Vector4f(0, 0, 0, 1).mul(matrix);
+        Vector4f right = new Vector4f(1, 0, 0, 1).mul(matrix);
+        Vector4f down = new Vector4f(0, 1, 0, 1).mul(matrix);
         pose.popPose();
+        if (origin.w <= 0 || !Float.isFinite(origin.w)) return;
+        float nx = origin.x / origin.w, ny = origin.y / origin.w, nz = origin.z / origin.w;
+        if (nz < -1 || nz > 1 || right.w <= 0 || down.w <= 0) return;
+        float x = (nx + 1) * mc.getWindow().getGuiScaledWidth() * 0.5f;
+        float distance = Mth.sqrt((float) (slot.x * slot.x + slot.y * slot.y + slot.z * slot.z));
+        float screenOffset = 18.0f * Mth.clamp(3.0f / Math.max(distance, 3.0f), 0.15f, 1.0f);
+        float y = (1 - ny) * mc.getWindow().getGuiScaledHeight() * 0.5f + screenOffset;
+        float sx = (right.x / right.w - nx) * mc.getWindow().getGuiScaledWidth() * 0.5f;
+        float sy = (down.y / down.w - ny) * mc.getWindow().getGuiScaledHeight() * -0.5f;
+        int color = ((int) (settings.nameAlpha * slot.nameFade * 255) << 24) | slot.color;
+        int background = settings.nameBorder
+                ? ((int) (settings.nameBackground * slot.nameFade * 255) << 24) : 0;
+        OVERLAY_NAMES.add(new OverlayName(slot.name, color, background, slot.nameWidth, x, y, sx, sy));
     }
 
-    /**
-     * Black, fully opaque quad covering one name plate, drawn through the pack's particle program
-     * before the text. It exists purely to make the pack treat those pixels as opaque again: the
-     * alpha of one drives the pack's translucency term to zero, which stops it from blending the
-     * beam back over the text. Black is chosen so the additive blend of that program adds nothing
-     * visible; the actual text and its background are drawn afterwards by the font.
-     */
-    private static void drawNamePlate(PoseStack pose, VertexConsumer out, Quaternionf orientation,
-                                      Settings settings, Slot slot) {
-        pose.pushPose();
-        pose.translate(slot.x, slot.y + settings.nameYOffset, slot.z);
-        pose.mulPose(orientation);
-        float scale = settings.nameScale;
-        pose.scale(-0.025f * scale, -0.025f * scale, 0.025f * scale);
-        Matrix4f matrix = pose.last().pose();
-        float left = -slot.nameWidth / 2.0f - 1.0f;
-        float right = left + slot.nameWidth + 2.0f;
-        float top = -1.0f;
-        float bottom = 10.0f;
-        vertexShader(out, matrix, left, top, 0.0f, 0.5f, 0.5f, 0.0f, 0.0f, 0.0f);
-        vertexShader(out, matrix, right, top, 0.0f, 0.5f, 0.5f, 0.0f, 0.0f, 0.0f);
-        vertexShader(out, matrix, right, bottom, 0.0f, 0.5f, 0.5f, 0.0f, 0.0f, 0.0f);
-        vertexShader(out, matrix, left, bottom, 0.0f, 0.5f, 0.5f, 0.0f, 0.0f, 0.0f);
-        pose.popPose();
+    public static void clearNameOverlay() {
+        OVERLAY_NAMES.clear();
+    }
+
+    public static void renderNameOverlay(GuiGraphics graphics) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null) {
+            OVERLAY_NAMES.clear();
+            return;
+        }
+        for (OverlayName name : OVERLAY_NAMES) {
+            graphics.pose().pushPose();
+            graphics.pose().translate(name.x, name.y, 0);
+            graphics.pose().scale(name.sx, name.sy, 1);
+            if ((name.background >>> 24) != 0) {
+                graphics.fill(-name.width / 2 - 1, -1, name.width / 2 + 1, 10, name.background);
+            }
+            // Font.adjustColor makes alpha values 0-3 fully opaque, so skip those last fade steps.
+            if ((name.color >>> 24) > 3) {
+                graphics.drawString(mc.font, name.text, -name.width / 2, 0, name.color, false);
+            }
+            graphics.pose().popPose();
+        }
+        OVERLAY_NAMES.clear();
     }
 
     /**

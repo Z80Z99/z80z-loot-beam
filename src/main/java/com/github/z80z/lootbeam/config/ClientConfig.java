@@ -13,7 +13,7 @@ public final class ClientConfig {
     public static ForgeConfigSpec.IntValue FADE_IN_TICKS, HALF_ROUND_TICKS, TOOLTIP_X, TOOLTIP_Y, RARE_ORDINAL_MIN;
     public static ForgeConfigSpec.DoubleValue FADE_IN_DISTANCE, BEAM_RADIUS, BEAM_HEIGHT, BEAM_Y_OFFSET,
             BEAM_ALPHA, GLOW_RADIUS, MAX_DISTANCE, NAME_DISTANCE, LOOK_SENSITIVITY, NAME_TEXT_ALPHA,
-            NAME_BACKGROUND_ALPHA, NAME_SCALE, NAME_Y_OFFSET, SOUND_VOLUME;
+            NAME_BACKGROUND_ALPHA, NAME_SCALE, NAME_Y_OFFSET, NAME_FADE_DISTANCE, NAME_NEAR_FADE_DISTANCE, SOUND_VOLUME;
     public static ForgeConfigSpec.ConfigValue<List<? extends String>> WHITELIST_NAMES, WHITELIST_TAGS,
             WHITELIST_MODS, BLACKLIST_NAMES, BLACKLIST_TAGS, BLACKLIST_MODS, SOUND_BLACKLIST_NAMES,
             SOUND_BLACKLIST_TAGS, SOUND_BLACKLIST_MODS, EQUIPMENT_NAMES, EQUIPMENT_TAGS, EQUIPMENT_MODS,
@@ -78,6 +78,8 @@ public final class ClientConfig {
         NAME_SCALE = decimal(b, "scale", 1, 0.1, 5, "名称缩放");
         NAME_Y_OFFSET = decimal(b, "yOffset", 0.75, -5, 10, "名称纵向偏移");
         NAME_DISTANCE = decimal(b, "distance", 16, 2, 64, "名称显示距离");
+        NAME_FADE_DISTANCE = decimal(b, "fadeDistance", 5, 0, 64, "名牌淡出距离；从显示范围边缘向内淡出的长度，设为 0 可关闭");
+        NAME_NEAR_FADE_DISTANCE = decimal(b, "nearFadeDistance", 3, 0, 64, "名牌贴近淡出距离；靠近物品时逐渐淡出，设为 0 可关闭");
         b.pop();
         b.push("tooltip");
         CROUCH_TOOLTIPS = bool(b, "renderOnCrouch", true, "潜行并看向物品时显示完整物品提示框");

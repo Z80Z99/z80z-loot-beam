@@ -70,21 +70,23 @@ public final class ClientEvents {
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (!sessionEnabled || !ClientConfig.ENABLED.get()) return;
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
-        // One pass over the world: the beams are submitted before the names, which keeps the
-        // text on top of the columns, and the frustum from the event drops off screen items.
+        // Prepare visible beams and project names for drawing after the shader pack composes the world.
         LootBeamRenderer.render(event.getPoseStack(), event.getPartialTick(), event.getFrustum());
     }
 
     @SubscribeEvent
     public static void onHud(RenderGuiEvent.Post event) {
-        // RenderGuiEvent fires once per frame, after every vanilla overlay has been
-        // drawn, so the cached lines are blitted exactly once and end up on top.
-        if (tooltipLines.isEmpty() || !sessionEnabled || !ClientConfig.CROUCH_TOOLTIPS.get()) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || mc.player == null || !mc.player.isCrouching()) return;
-        int x = ClientConfig.TOOLTIP_X.get();
-        int y = event.getWindow().getGuiScaledHeight() - ClientConfig.TOOLTIP_Y.get();
-        event.getGuiGraphics().renderTooltip(mc.font, tooltipLines, Optional.empty(), x, y);
+        if (!sessionEnabled || !ClientConfig.ENABLED.get() || mc.level == null || mc.player == null) {
+            LootBeamRenderer.clearNameOverlay();
+            return;
+        }
+        if (!tooltipLines.isEmpty() && ClientConfig.CROUCH_TOOLTIPS.get() && mc.player.isCrouching()) {
+            int x = ClientConfig.TOOLTIP_X.get();
+            int y = event.getWindow().getGuiScaledHeight() - ClientConfig.TOOLTIP_Y.get();
+            event.getGuiGraphics().renderTooltip(mc.font, tooltipLines, Optional.empty(), x, y);
+        }
+        LootBeamRenderer.renderNameOverlay(event.getGuiGraphics());
     }
 
     /**
