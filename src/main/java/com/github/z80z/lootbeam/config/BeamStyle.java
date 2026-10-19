@@ -20,5 +20,11 @@ public enum BeamStyle {
     /** Two ribbons winding around the axis opposite each other. */
     DOUBLE_HELIX,
     /** A stack of glowing rings that slowly rises along the beam. */
-    RINGS
+    RINGS,
+    /** Three broad, gently twisting curtains of light. */
+    AURORA,
+    /** A narrow, jagged bolt climbing through the beam. */
+    LIGHTNING,
+    /** A stack of separated, square voxel-like segments. */
+    PIXEL
 }

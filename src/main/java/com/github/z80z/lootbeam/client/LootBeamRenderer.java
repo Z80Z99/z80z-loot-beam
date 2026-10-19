@@ -494,14 +494,26 @@ public final class LootBeamRenderer {
 
         if (out != null && settings.beams && h > 0.01f) {
             BeamStyle style = settings.style;
-            if (style == BeamStyle.SPIRAL || style == BeamStyle.DOUBLE_HELIX) {
-                int strands = style == BeamStyle.DOUBLE_HELIX ? 2 : 1;
+            if (style == BeamStyle.SPIRAL || style == BeamStyle.DOUBLE_HELIX || style == BeamStyle.AURORA) {
+                int strands = switch (style) {
+                    case DOUBLE_HELIX -> 2;
+                    case AURORA -> 3;
+                    default -> 1;
+                };
                 for (int strand = 0; strand < strands; strand++) {
-                    float offset = strand * Mth.PI;
+                    float offset = strand * Mth.TWO_PI / strands;
                     if (settings.shaderMode) {
-                        ribbonShader(out, matrix, w * breathe, h, r, g, b, alpha, phase, dynamic, offset);
+                        if (style == BeamStyle.AURORA) {
+                            auroraRibbonShader(out, matrix, w * breathe, h, r, g, b, alpha, phase, dynamic, offset);
+                        } else {
+                            ribbonShader(out, matrix, w * breathe, h, r, g, b, alpha, phase, dynamic, offset);
+                        }
                     } else {
-                        ribbon(out, matrix, w * breathe, h, r, g, b, alpha, phase, dynamic, offset);
+                        if (style == BeamStyle.AURORA) {
+                            auroraRibbon(out, matrix, w * breathe, h, r, g, b, alpha, phase, dynamic, offset);
+                        } else {
+                            ribbon(out, matrix, w * breathe, h, r, g, b, alpha, phase, dynamic, offset);
+                        }
                     }
                 }
             } else if (style == BeamStyle.RINGS) {
@@ -509,6 +521,18 @@ public final class LootBeamRenderer {
                     ringsShader(out, matrix, w * breathe, h, r, g, b, alpha, phase, dynamic);
                 } else {
                     rings(out, matrix, w * breathe, h, r, g, b, alpha, phase, dynamic);
+                }
+            } else if (style == BeamStyle.LIGHTNING) {
+                if (settings.shaderMode) {
+                    lightningShader(out, matrix, w * breathe, h, r, g, b, alpha, phase, dynamic);
+                } else {
+                    lightning(out, matrix, w * breathe, h, r, g, b, alpha, phase, dynamic);
+                }
+            } else if (style == BeamStyle.PIXEL) {
+                if (settings.shaderMode) {
+                    pixelBeamShader(out, matrix, w * breathe, h, r, g, b, alpha, phase, dynamic);
+                } else {
+                    pixelBeam(out, matrix, w * breathe, h, r, g, b, alpha, phase, dynamic);
                 }
             } else {
                 Shells shells = shells(style);
@@ -655,6 +679,139 @@ public final class LootBeamRenderer {
                     0.5f, 1.0f - t1, cr, cg, cb);
             vertexShader(out, m, c1x * (middle - half), height * t1, c1z * (middle - half),
                     0.5f, 1.0f - t1, cr, cg, cb);
+        }
+    }
+
+    /** Broad, slowly twisting ribbons for the flowing three-strand aurora style. */
+    private static void auroraRibbon(VertexConsumer out, Matrix4f m, float radius, float height,
+                                     float r, float g, float b, float alpha, float phase, boolean dynamic,
+                                     float angleOffset) {
+        float middle = radius * 0.52f;
+        float half = radius * 0.46f;
+        float light = alpha * 0.52f;
+        for (int i = 0; i < RIBBON_STEPS; i++) {
+            float t0 = (float) i / RIBBON_STEPS;
+            float t1 = (float) (i + 1) / RIBBON_STEPS;
+            float wave0 = Mth.sin(t0 * Mth.TWO_PI * 1.25f + phase * 0.35f) * 0.24f;
+            float wave1 = Mth.sin(t1 * Mth.TWO_PI * 1.25f + phase * 0.35f) * 0.24f;
+            float a0 = angleOffset + phase * 0.12f + wave0 + Mth.PI * 0.18f * t0;
+            float a1 = angleOffset + phase * 0.12f + wave1 + Mth.PI * 0.18f * t1;
+            float p0 = verticalProfile(t0) * shimmer(t0, phase, dynamic) * light;
+            float p1 = verticalProfile(t1) * shimmer(t1, phase, dynamic) * light;
+            float c0x = Mth.cos(a0), c0z = Mth.sin(a0);
+            float c1x = Mth.cos(a1), c1z = Mth.sin(a1);
+            vertex(out, m, c0x * (middle - half), height * t0, c0z * (middle - half), r, g, b, p0);
+            vertex(out, m, c0x * (middle + half), height * t0, c0z * (middle + half), r, g, b, p0);
+            vertex(out, m, c1x * (middle + half), height * t1, c1z * (middle + half), r, g, b, p1);
+            vertex(out, m, c1x * (middle - half), height * t1, c1z * (middle - half), r, g, b, p1);
+        }
+    }
+
+    /** Shader path for aurora ribbons; the beam texture supplies the vertical falloff. */
+    private static void auroraRibbonShader(VertexConsumer out, Matrix4f m, float radius, float height,
+                                           float r, float g, float b, float alpha, float phase, boolean dynamic,
+                                           float angleOffset) {
+        float middle = radius * 0.52f;
+        float half = radius * 0.46f;
+        float light = alpha * 0.52f;
+        float cr = r * light, cg = g * light, cb = b * light;
+        for (int i = 0; i < RIBBON_STEPS; i++) {
+            float t0 = (float) i / RIBBON_STEPS;
+            float t1 = (float) (i + 1) / RIBBON_STEPS;
+            float wave0 = Mth.sin(t0 * Mth.TWO_PI * 1.25f + phase * 0.35f) * 0.24f;
+            float wave1 = Mth.sin(t1 * Mth.TWO_PI * 1.25f + phase * 0.35f) * 0.24f;
+            float a0 = angleOffset + phase * 0.12f + wave0 + Mth.PI * 0.18f * t0;
+            float a1 = angleOffset + phase * 0.12f + wave1 + Mth.PI * 0.18f * t1;
+            float c0x = Mth.cos(a0), c0z = Mth.sin(a0);
+            float c1x = Mth.cos(a1), c1z = Mth.sin(a1);
+            vertexShader(out, m, c0x * (middle - half), height * t0, c0z * (middle - half), 0.5f, 1.0f - t0, cr, cg, cb);
+            vertexShader(out, m, c0x * (middle + half), height * t0, c0z * (middle + half), 0.5f, 1.0f - t0, cr, cg, cb);
+            vertexShader(out, m, c1x * (middle + half), height * t1, c1z * (middle + half), 0.5f, 1.0f - t1, cr, cg, cb);
+            vertexShader(out, m, c1x * (middle - half), height * t1, c1z * (middle - half), 0.5f, 1.0f - t1, cr, cg, cb);
+        }
+    }
+
+    /** A bright angular ribbon that jumps side to side as it climbs. */
+    private static void lightning(VertexConsumer out, Matrix4f m, float radius, float height,
+                                  float r, float g, float b, float alpha, float phase, boolean dynamic) {
+        final int steps = 10;
+        for (int i = 0; i < steps; i++) {
+            float t0 = (float) i / steps, t1 = (float) (i + 1) / steps;
+            float jitter0 = ((i & 1) == 0 ? -0.48f : 0.48f) + Mth.sin(phase * 0.7f + i) * 0.08f;
+            float jitter1 = ((i & 1) == 0 ? 0.48f : -0.48f) + Mth.sin(phase * 0.7f + i + 1) * 0.08f;
+            float a0 = phase * 0.18f + jitter0, a1 = phase * 0.18f + jitter1;
+            float inner = radius * 0.08f, outer = radius * 0.42f;
+            float p0 = verticalProfile(t0) * shimmer(t0, phase, dynamic) * alpha * 1.25f;
+            float p1 = verticalProfile(t1) * shimmer(t1, phase, dynamic) * alpha * 1.25f;
+            vertex(out, m, Mth.cos(a0) * inner, height * t0, Mth.sin(a0) * inner, r, g, b, p0);
+            vertex(out, m, Mth.cos(a0) * outer, height * t0, Mth.sin(a0) * outer, r, g, b, p0);
+            vertex(out, m, Mth.cos(a1) * outer, height * t1, Mth.sin(a1) * outer, r, g, b, p1);
+            vertex(out, m, Mth.cos(a1) * inner, height * t1, Mth.sin(a1) * inner, r, g, b, p1);
+        }
+    }
+
+    private static void lightningShader(VertexConsumer out, Matrix4f m, float radius, float height,
+                                        float r, float g, float b, float alpha, float phase, boolean dynamic) {
+        final int steps = 10;
+        float cr = r * alpha * 1.25f, cg = g * alpha * 1.25f, cb = b * alpha * 1.25f;
+        for (int i = 0; i < steps; i++) {
+            float t0 = (float) i / steps, t1 = (float) (i + 1) / steps;
+            float jitter0 = ((i & 1) == 0 ? -0.48f : 0.48f) + Mth.sin(phase * 0.7f + i) * 0.08f;
+            float jitter1 = ((i & 1) == 0 ? 0.48f : -0.48f) + Mth.sin(phase * 0.7f + i + 1) * 0.08f;
+            float a0 = phase * 0.18f + jitter0, a1 = phase * 0.18f + jitter1;
+            float inner = radius * 0.08f, outer = radius * 0.42f;
+            vertexShader(out, m, Mth.cos(a0) * inner, height * t0, Mth.sin(a0) * inner, 0.5f, 1.0f - t0, cr, cg, cb);
+            vertexShader(out, m, Mth.cos(a0) * outer, height * t0, Mth.sin(a0) * outer, 0.5f, 1.0f - t0, cr, cg, cb);
+            vertexShader(out, m, Mth.cos(a1) * outer, height * t1, Mth.sin(a1) * outer, 0.5f, 1.0f - t1, cr, cg, cb);
+            vertexShader(out, m, Mth.cos(a1) * inner, height * t1, Mth.sin(a1) * inner, 0.5f, 1.0f - t1, cr, cg, cb);
+        }
+    }
+
+    /** Stacked square prisms create a chunky, voxel-like pillar with visible gaps. */
+    private static void pixelBeam(VertexConsumer out, Matrix4f m, float radius, float height,
+                                  float r, float g, float b, float alpha, float phase, boolean dynamic) {
+        final int tiers = 7;
+        for (int tier = 0; tier < tiers; tier++) {
+            float t0 = (float) tier / tiers + 0.012f;
+            float t1 = (float) (tier + 1) / tiers - 0.012f;
+            float size = (tier % 2 == 0 ? 0.82f : 0.62f) * (1.0f - 0.18f * t0);
+            float shift = dynamic ? Mth.sin(phase * 0.35f + tier * 1.7f) * radius * 0.08f : 0f;
+            float level = alpha * verticalProfile((t0 + t1) * 0.5f) * (dynamic ? shimmer((t0 + t1) * 0.5f, phase, true) : 1f);
+            float cy = height * ((t0 + t1) * 0.5f);
+            for (int side = 0; side < 4; side++) {
+                float a0 = Mth.PI * 0.25f + side * Mth.PI * 0.5f;
+                float a1 = a0 + Mth.PI * 0.5f;
+                float x0 = Mth.cos(a0) * radius * size + shift, z0 = Mth.sin(a0) * radius * size - shift;
+                float x1 = Mth.cos(a1) * radius * size + shift, z1 = Mth.sin(a1) * radius * size - shift;
+                float x2 = Mth.cos(a1) * radius * size + shift, z2 = Mth.sin(a1) * radius * size - shift;
+                float x3 = Mth.cos(a0) * radius * size + shift, z3 = Mth.sin(a0) * radius * size - shift;
+                vertex(out, m, x0, height * t0, z0, r, g, b, level);
+                vertex(out, m, x1, height * t0, z1, r, g, b, level);
+                vertex(out, m, x2, height * t1, z2, r, g, b, level);
+                vertex(out, m, x3, height * t1, z3, r, g, b, level);
+            }
+        }
+    }
+
+    private static void pixelBeamShader(VertexConsumer out, Matrix4f m, float radius, float height,
+                                        float r, float g, float b, float alpha, float phase, boolean dynamic) {
+        final int tiers = 7;
+        float cr = r * alpha, cg = g * alpha, cb = b * alpha;
+        for (int tier = 0; tier < tiers; tier++) {
+            float t0 = (float) tier / tiers + 0.012f;
+            float t1 = (float) (tier + 1) / tiers - 0.012f;
+            float size = (tier % 2 == 0 ? 0.82f : 0.62f) * (1.0f - 0.18f * t0);
+            float shift = dynamic ? Mth.sin(phase * 0.35f + tier * 1.7f) * radius * 0.08f : 0f;
+            for (int side = 0; side < 4; side++) {
+                float a0 = Mth.PI * 0.25f + side * Mth.PI * 0.5f;
+                float a1 = a0 + Mth.PI * 0.5f;
+                float x0 = Mth.cos(a0) * radius * size + shift, z0 = Mth.sin(a0) * radius * size - shift;
+                float x1 = Mth.cos(a1) * radius * size + shift, z1 = Mth.sin(a1) * radius * size - shift;
+                vertexShader(out, m, x0, height * t0, z0, 0.5f, 1.0f - t0, cr, cg, cb);
+                vertexShader(out, m, x1, height * t0, z1, 0.5f, 1.0f - t0, cr, cg, cb);
+                vertexShader(out, m, x1, height * t1, z1, 0.5f, 1.0f - t1, cr, cg, cb);
+                vertexShader(out, m, x0, height * t1, z0, 0.5f, 1.0f - t1, cr, cg, cb);
+            }
         }
     }
 

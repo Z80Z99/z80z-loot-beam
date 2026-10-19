@@ -29,7 +29,8 @@ public final class ClientConfig {
         b.push("beam");
         ENABLE_BEAM = bool(b, "enableBeam", true, "显示垂直光柱");
         BEAM_STYLE = b.comment("光柱样式：CLASSIC=经典光柱，LASER=纤细激光，SOFT=柔光雾柱，CONE=锥形尖塔，"
-                        + "SPIRAL=螺旋光带，DOUBLE_HELIX=双螺旋，RINGS=浮空光环")
+                        + "SPIRAL=螺旋光带，DOUBLE_HELIX=双螺旋，RINGS=浮空光环，AURORA=极光帘，"
+                        + "LIGHTNING=闪电，PIXEL=像素光柱")
                 .defineEnum("style", BeamStyle.CLASSIC);
         FADE_IN_TICKS = integer(b, "fadeInTicks", 10, 1, 100, "生成后的淡入时间（刻）");
         FADE_IN_DISTANCE = decimal(b, "fadeInDistance", 3, 0, 100, "贴近物品时的淡出距离；设为 0 可关闭近距离淡出");
