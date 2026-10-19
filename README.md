@@ -3,6 +3,14 @@
 Minecraft 1.20.1 Forge 客户端模组：为掉落物显示按稀有度着色的光柱、光晕、名称与物品提示框。
 无第三方前置，兼容原版渲染，也针对光影包做了专门处理。
 
+Minecraft 1.20.1 · Forge 47.3.0+ · Java 17 · 仅客户端
+
+## 下载
+
+从 [Releases](https://github.com/Z80Z99/z80z-loot-beam/releases) 下载最新的 `z80z-loot-beam-forge-1.20.1-<版本>.jar`。
+
+> 3.2.5 是用于排查问题的诊断版本，普通玩家请使用更新的稳定版；若 Releases 中同时存在诊断版和稳定版，优先选择不带 “diagnostic” 的版本。
+
 ## 特性
 
 - 7 种光柱样式：经典光柱、纤细激光、柔光雾柱、锥形尖塔、螺旋光带、双螺旋、浮空光环
@@ -37,7 +45,7 @@ Minecraft 1.20.1 Forge 客户端模组：为掉落物显示按稀有度着色的
 
 ## 从源码构建
 
-需要 JDK 17：
+需要 JDK 17，项目自带 Gradle Wrapper：
 
 ```bash
 ./gradlew build
